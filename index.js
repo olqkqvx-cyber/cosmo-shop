@@ -628,7 +628,7 @@ if (interaction.commandName === "panel-zakup") {
     // SELECT MENU
     // =========================
 
-    if (!products.length) {
+if (interaction.isStringSelectMenu()) {
 // Wybór rodzaju ticketu
 if (interaction.customId === "wybierz_ticket") {
 
@@ -641,7 +641,7 @@ if (interaction.customId === "wybierz_ticket") {
             p => p.guildId === guildId
         );
 
-        if (!products.length) {
+      if (interaction.isStringSelectMenu()) {
             return interaction.update({
                 content: "❌ Sklep jest obecnie pusty.",
                 components: []
@@ -1028,7 +1028,7 @@ const ticketCategory =
             `✅ Utworzono ticket: ${ticketChannel}`,
           components: []
         });
-      }
+      
     }
 
 
