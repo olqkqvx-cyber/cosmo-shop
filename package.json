@@ -1,0 +1,16 @@
+{
+  "name": "cosmo-shop-bot",
+  "version": "1.0.0",
+  "description": "Cosmo Shøp - Bot - Discord shop and order management bot",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "discord.js": "^14.24.2",
+    "dotenv": "^17.2.3"
+  }
+}
