@@ -502,7 +502,7 @@ if (interaction.commandName === "panel-zakup") {
           p => p.guildId === guildId
         );
 
-        if (!products.length) {
+    if (interaction.isStringSelectMenu()) {
           return interaction.reply({
             content: "🛒 Sklep jest obecnie pusty.",
             ephemeral: true
@@ -804,7 +804,7 @@ if (interaction.customId === "wybierz_ticket") {
             (p.category || "inne") === categoryId
         );
 
-        if (!products.length) {
+      if (!products.length) {
           return interaction.update({
             content:
               "❌ W tej kategorii nie ma produktów.",
@@ -1030,8 +1030,8 @@ const ticketCategory =
         });
       
     }
-
-
+    }
+    }
     } catch (error) {
     console.error("Błąd interactionCreate:", error);
 
