@@ -99,54 +99,54 @@ const commands = [
     .setName("produkty")
     .setDescription("Pokazuje produkty wraz z ID."),
 
-  // /produkt-dodaj
-  new SlashCommandBuilder()
-    .setName("produkt-dodaj")
-    .setDescription("Dodaje produkt do sklepu.")
-    .addStringOption(option =>
-      option
-        .setName("nazwa")
-        .setDescription("Nazwa produktu")
-        .setRequired(true)
-    )
-    .addNumberOption(option =>
-      option
-        .setName("cena")
-        .setDescription("Cena produktu")
-        .setRequired(true)
-        .setMinValue(0)
-    )
-    .addStringOption(option =>
-      option
-        .setName("opis")
-        .setDescription("Opis produktu")
-        .setRequired(false)
-    )
-    .addStringOption(option =>
-      option
-        .setName("kategoria")
-        .setDescription("Kategoria produktu")
-        .setRequired(true)
-        .addChoices(
-          {
-            name: "🎮 Gry",
-            value: "gry"
-          },
-          {
-            name: "👤 Konta",
-            value: "konta"
-          },
-          {
-            name: "💎 Premium",
-            value: "premium"
-          },
-          {
-            name: "📦 Inne",
-            value: "inne"
-          }
-        )
-    )
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
+ // /produkt-dodaj
+new SlashCommandBuilder()
+  .setName("produkt-dodaj")
+  .setDescription("Dodaje produkt do sklepu.")
+  .addStringOption(option =>
+    option
+      .setName("nazwa")
+      .setDescription("Nazwa produktu")
+      .setRequired(true)
+  )
+  .addNumberOption(option =>
+    option
+      .setName("cena")
+      .setDescription("Cena produktu")
+      .setRequired(true)
+      .setMinValue(0)
+  )
+  .addStringOption(option =>
+    option
+      .setName("kategoria")
+      .setDescription("Kategoria produktu")
+      .setRequired(true)
+      .addChoices(
+        {
+          name: "🎮 Gry",
+          value: "gry"
+        },
+        {
+          name: "👤 Konta",
+          value: "konta"
+        },
+        {
+          name: "💎 Premium",
+          value: "premium"
+        },
+        {
+          name: "📦 Inne",
+          value: "inne"
+        }
+      )
+  )
+  .addStringOption(option =>
+    option
+      .setName("opis")
+      .setDescription("Opis produktu")
+      .setRequired(false)
+  )
+  .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
   // /produkt-usun
   new SlashCommandBuilder()
