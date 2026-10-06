@@ -1036,7 +1036,17 @@ const ticketCategory =
 // HTTP SERVER DLA RENDERA
 // =========================
 
-const PORT = process.env.PORT || 3000;
+  } catch (error) {
+    console.error("Błąd interactionCreate:", error);
+
+    if (!interaction.replied && !interaction.deferred) {
+      await interaction.reply({
+        content: "❌ Wystąpił błąd podczas wykonywania operacji.",
+        ephemeral: true
+      }).catch(() => {});
+    }
+  }
+});const PORT = process.env.PORT || 3000;
 
 http.createServer((req, res) => {
   res.writeHead(200, {
