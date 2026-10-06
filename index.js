@@ -356,40 +356,43 @@ client.on("interactionCreate", async interaction => {
         });
       }
 
-      // /panel-zakup
-      if (interaction.commandName === "panel-zakup") {
-        const embed = new EmbedBuilder()
-          .setTitle("🛍️ Cosmo Shøp")
-          .setDescription(
-            "Kliknij przycisk poniżej, aby rozpocząć zakup.\n\n" +
-            "🛒 **Kup produkt**\n" +
-            "Wybierz kategorię, a następnie produkt."
-          )
-          .setFooter({
-            text: "Cosmo Shøp • System zakupów"
-          });
-
-        const button = new ButtonBuilder()
-    .setCustomId("otworz_sklep")
-    .setLabel("Kup produkt")
-    .setEmoji("🛒")
-    .setStyle(ButtonStyle.Primary);
-
-const helpButton = new ButtonBuilder()
-    .setCustomId("potrzebuje_pomocy")
-    .setLabel("Potrzebuję pomocy")
-    .setEmoji("🆘")
-    .setStyle(ButtonStyle.Secondary);
-
-const row = new ActionRowBuilder()
-    .addComponents(button, helpButton);
-
-        return interaction.reply({
-          embeds: [embed],
-          components: [row]
+     // panel-zakup
+if (interaction.commandName === "panel-zakup") {
+    const embed = new EmbedBuilder()
+        .setTitle("🛍️ Cosmo Shøp × STWÓRZ TICKET")
+        .setDescription(
+            "Chcesz coś kupić lub potrzebujesz pomocy?\n\n" +
+            "🎫 **Wybierz rodzaj ticketu poniżej.**"
+        )
+        .setFooter({
+            text: "Cosmo Shøp • System ticketów"
         });
-      }
-    }
+
+    const menu = new StringSelectMenuBuilder()
+        .setCustomId("wybierz_ticket")
+        .setPlaceholder("🎫 Wybierz rodzaj ticketu")
+        .addOptions(
+            new StringSelectMenuOptionBuilder()
+                .setLabel("Chcę kupić produkt")
+                .setDescription("Przejdź do sklepu i wybierz produkt")
+                .setEmoji("🛒")
+                .setValue("kupno"),
+
+            new StringSelectMenuOptionBuilder()
+                .setLabel("Potrzebuję pomocy")
+                .setDescription("Utwórz ticket i skontaktuj się z obsługą")
+                .setEmoji("🆘")
+                .setValue("pomoc")
+        );
+
+    const row = new ActionRowBuilder()
+        .addComponents(menu);
+
+    return interaction.reply({
+        embeds: [embed],
+        components: [row]
+    });
+}
 
     // =========================
     // BUTTONY
@@ -625,8 +628,169 @@ const row = new ActionRowBuilder()
     // SELECT MENU
     // =========================
 
-    if (interaction.isStringSelectMenu()) {
+    if (!products.length) {
+// Wybór rodzaju ticketu
+if (interaction.customId === "wybierz_ticket") {
 
+    const wybor = interaction.values[0];
+
+    // 🛒 KUP PRODUKT
+    if (wybor === "kupno") {
+
+        const products = data.products.filter(
+            p => p.guildId === guildId
+        );
+
+        if (!products.length) {
+            return interaction.update({
+                content: "❌ Sklep jest obecnie pusty.",
+                components: []
+            });
+        }
+
+        const availableCategories = [
+            ...new Set(
+                products.map(p => p.category || "inne")
+            )
+        ];
+
+        const menu = new StringSelectMenuBuilder()
+            .setCustomId("wybierz_kategorie")
+            .setPlaceholder("🛒 Wybierz kategorię");
+
+        for (const categoryId of availableCategories) {
+
+            const category =
+                CATEGORIES[categoryId] || CATEGORIES.inne;
+
+            menu.addOptions(
+                new StringSelectMenuOptionBuilder()
+                    .setLabel(category.name)
+                    .setValue(categoryId)
+                    .setEmoji(category.emoji)
+            );
+        }
+
+        const row = new ActionRowBuilder()
+            .addComponents(menu);
+
+        return interaction.update({
+            content: "🛒 **Wybierz kategorię produktu:**",
+            components: [row]
+        });
+    }
+
+    // 🆘 POTRZEBUJĘ POMOCY
+    if (wybor === "pomoc") {
+
+        const staffRole = interaction.guild.roles.cache.find(
+            role => role.name.toLowerCase() === "obsługa"
+        );
+
+        if (!staffRole) {
+            return interaction.update({
+                content: "❌ Nie znaleziono roli `Obsługa`.",
+                components: []
+            });
+        }
+
+        const username = cleanName(interaction.user.username);
+
+        await interaction.deferUpdate();
+
+        const ticketCategory = await interaction.guild.channels.create({
+            name: `🆘 POMOC - ${username}`.slice(0, 100),
+            type: ChannelType.GuildCategory,
+            permissionOverwrites: [
+                {
+                    id: interaction.guild.roles.everyone.id,
+                    deny: ["ViewChannel"]
+                },
+                {
+                    id: interaction.user.id,
+                    allow: [
+                        "ViewChannel",
+                        "SendMessages",
+                        "ReadMessageHistory",
+                        "AttachFiles"
+                    ]
+                },
+                {
+                    id: staffRole.id,
+                    allow: [
+                        "ViewChannel",
+                        "SendMessages",
+                        "ReadMessageHistory",
+                        "AttachFiles"
+                    ]
+                }
+            ]
+        });
+
+        const ticketChannel = await interaction.guild.channels.create({
+            name: `🆘・pomoc-${username}`.slice(0, 100),
+            type: ChannelType.GuildText,
+            parent: ticketCategory.id,
+            permissionOverwrites: [
+                {
+                    id: interaction.guild.roles.everyone.id,
+                    deny: ["ViewChannel"]
+                },
+                {
+                    id: interaction.user.id,
+                    allow: [
+                        "ViewChannel",
+                        "SendMessages",
+                        "ReadMessageHistory",
+                        "AttachFiles"
+                    ]
+                },
+                {
+                    id: staffRole.id,
+                    allow: [
+                        "ViewChannel",
+                        "SendMessages",
+                        "ReadMessageHistory",
+                        "AttachFiles"
+                    ]
+                }
+            ]
+        });
+
+        const embed = new EmbedBuilder()
+            .setTitle("🆘 Potrzebujesz pomocy?")
+            .setDescription(
+                `Witaj ${interaction.user}!\n\n` +
+                "Opisz tutaj dokładnie, w czym potrzebujesz pomocy. " +
+                "Obsługa odpowie tak szybko, jak to możliwe."
+            )
+            .setFooter({
+                text: "Cosmo Shøp • Pomoc"
+            });
+
+        const closeButton = new ButtonBuilder()
+            .setCustomId("zamknij_ticket")
+            .setLabel("Zamknij ticket")
+            .setEmoji("🔒")
+            .setStyle(ButtonStyle.Danger);
+
+        const row = new ActionRowBuilder()
+            .addComponents(closeButton);
+
+        await ticketChannel.send({
+            content: `${interaction.user} <@&${staffRole.id}>`,
+            embeds: [embed],
+            components: [row]
+        });
+
+        await interaction.editReply({
+            content: `✅ Utworzono ticket pomocy: ${ticketChannel}`,
+            components: []
+        });
+    }
+
+    return;
+}
       // Wybór kategorii
       if (
         interaction.customId === "wybierz_kategorie"
