@@ -1031,21 +1031,6 @@ const ticketCategory =
       }
     }
 
-  } catch (error) {
-    console.error(
-      "Błąd interactionCreate:",
-      error
-    );
-
-    if (!interaction.replied && !interaction.deferred) {
-      await interaction.reply({
-        content:
-          "❌ Wystąpił błąd podczas wykonywania operacji.",
-        ephemeral: true
-      }).catch(() => {});
-    }
-  }
-});
 
 // =========================
 // HTTP SERVER DLA RENDERA
