@@ -757,7 +757,7 @@ const ticketCategory =
           components: [row]
         });
 
-        return interaction.editReply
+        return interaction.editReply({
           content:
             `✅ Utworzono ticket: ${ticketChannel}`,
           components: []
