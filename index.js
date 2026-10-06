@@ -622,12 +622,14 @@ client.on("interactionCreate", async interaction => {
         }
 
         const username = cleanName(
-          interaction.user.username
-        );
+  interaction.user.username
+);
 
-        // Tworzymy osobną kategorię dla każdego ticketu
-        const ticketCategory =
-          await interaction.guild.channels.create({
+await interaction.deferUpdate();
+
+// Tworzymy osobną kategorię dla każdego ticketu
+const ticketCategory =
+  await interaction.guild.channels.create({
             name: `🛒 ZAKUP - ${username}`.slice(0, 100),
             type: ChannelType.GuildCategory,
             permissionOverwrites: [
@@ -755,7 +757,7 @@ client.on("interactionCreate", async interaction => {
           components: [row]
         });
 
-        return interaction.update({
+        return interaction.editReply
           content:
             `✅ Utworzono ticket: ${ticketChannel}`,
           components: []
