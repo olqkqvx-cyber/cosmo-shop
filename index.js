@@ -370,13 +370,19 @@ client.on("interactionCreate", async interaction => {
           });
 
         const button = new ButtonBuilder()
-          .setCustomId("otworz_sklep")
-          .setLabel("Kup produkt")
-          .setEmoji("🛒")
-          .setStyle(ButtonStyle.Primary);
+    .setCustomId("otworz_sklep")
+    .setLabel("Kup produkt")
+    .setEmoji("🛒")
+    .setStyle(ButtonStyle.Primary);
 
-        const row = new ActionRowBuilder()
-          .addComponents(button);
+const helpButton = new ButtonBuilder()
+    .setCustomId("potrzebuje_pomocy")
+    .setLabel("Potrzebuję pomocy")
+    .setEmoji("🆘")
+    .setStyle(ButtonStyle.Secondary);
+
+const row = new ActionRowBuilder()
+    .addComponents(button, helpButton);
 
         return interaction.reply({
           embeds: [embed],
@@ -392,7 +398,103 @@ client.on("interactionCreate", async interaction => {
     if (interaction.isButton()) {
 
       // Otwieranie sklepu
-      if (interaction.customId === "otworz_sklep") {
+      if (interaction.customId === "potrzebuje_pomocy") {
+    const staffRole = interaction.guild.roles.cache.find(
+        role => role.name.toLowerCase() === "obsługa"
+    );
+
+    if (!staffRole) {
+        return interaction.reply({
+            content: "❌ Nie znaleziono roli `Obsługa`.",
+            ephemeral: true
+        });
+    }
+
+    const username = cleanName(interaction.user.username);
+
+    await interaction.deferReply({ ephemeral: true });
+
+    const ticketCategory = await interaction.guild.channels.create({
+        name: `🆘 POMOC - ${username}`.slice(0, 100),
+        type: ChannelType.GuildCategory,
+        permissionOverwrites: [
+            {
+                id: interaction.guild.roles.everyone.id,
+                deny: ["ViewChannel"]
+            },
+            {
+                id: interaction.user.id,
+                allow: [
+                    "ViewChannel",
+                    "SendMessages",
+                    "ReadMessageHistory",
+                    "AttachFiles"
+                ]
+            },
+            {
+                id: staffRole.id,
+                allow: [
+                    "ViewChannel",
+                    "SendMessages",
+                    "ReadMessageHistory",
+                    "AttachFiles"
+                ]
+            }
+        ]
+    });
+
+    const ticketChannel = await interaction.guild.channels.create({
+        name: `🆘・pomoc-${username}`.slice(0, 100),
+        type: ChannelType.GuildText,
+        parent: ticketCategory.id,
+        permissionOverwrites: [
+            {
+                id: interaction.guild.roles.everyone.id,
+                deny: ["ViewChannel"]
+            },
+            {
+                id: interaction.user.id,
+                allow: [
+                    "ViewChannel",
+                    "SendMessages",
+                    "ReadMessageHistory",
+                    "AttachFiles"
+                ]
+            },
+            {
+                id: staffRole.id,
+                allow: [
+                    "ViewChannel",
+                    "SendMessages",
+                    "ReadMessageHistory",
+                    "AttachFiles"
+                ]
+            }
+        ]
+    });
+
+    const helpEmbed = new EmbedBuilder()
+        .setTitle("🆘 Cosmo Shøp × Pomoc")
+        .setDescription(
+            `Witaj <@${interaction.user.id}>!\n\n` +
+            `Napisz tutaj, w czym potrzebujesz pomocy.\n` +
+            `Obsługa Cosmo Shøp odpowie tak szybko, jak to możliwe.`
+        )
+        .setFooter({
+            text: "Cosmo Shøp • Centrum pomocy"
+        });
+
+    await ticketChannel.send({
+        content: `<@${interaction.user.id}> <@&${staffRole.id}>`,
+        embeds: [helpEmbed]
+    });
+
+    await interaction.editReply({
+        content: `✅ Utworzono ticket pomocy: ${ticketChannel}`
+    });
+
+    return;
+} if (interaction.customId === "otworz_sklep") {
         const products = data.products.filter(
           p => p.guildId === guildId
         );
