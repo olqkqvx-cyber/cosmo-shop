@@ -1032,10 +1032,6 @@ const ticketCategory =
     }
 
 
-// =========================
-// HTTP SERVER DLA RENDERA
-// =========================
-
    catch (error) {
     console.error("Błąd interactionCreate:", error);
 
@@ -1046,7 +1042,9 @@ const ticketCategory =
       }).catch(() => {});
     }
   }
-});const PORT = process.env.PORT || 3000;
+});
+
+    const PORT = process.env.PORT || 3000;
 
 http.createServer((req, res) => {
   res.writeHead(200, {
