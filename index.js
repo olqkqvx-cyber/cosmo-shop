@@ -1032,7 +1032,7 @@ const ticketCategory =
     }
 
 
-   catch (error) {
+    } catch (error) {
     console.error("Błąd interactionCreate:", error);
 
     if (!interaction.replied && !interaction.deferred) {
