@@ -22,50 +22,30 @@ const http = require("node:http");
 
 const DATA_FILE = path.join(__dirname, "data.json");
 
-// =====================================================
-// KATEGORIE PRODUKTÓW
-// =====================================================
-
 const CATEGORIES = {
-  gry: {
-    name: "Gry",
-    emoji: "🎮"
-  },
-  konta: {
-    name: "Konta",
-    emoji: "👤"
-  },
-  premium: {
-    name: "Premium",
-    emoji: "💎"
-  },
-  inne: {
-    name: "Inne",
-    emoji: "📦"
-  }
+  gry: { name: "Gry", emoji: "🎮" },
+  konta: { name: "Konta", emoji: "👤" },
+  premium: { name: "Premium", emoji: "💎" },
+  inne: { name: "Inne", emoji: "📦" }
 };
-
-// =====================================================
-// DATA
-// =====================================================
 
 function loadData() {
   try {
     const data = JSON.parse(fs.readFileSync(DATA_FILE, "utf8"));
 
-    if (!data.products) {
+    if (!Array.isArray(data.products)) {
       data.products = [];
     }
 
-    if (!data.orders) {
+    if (!Array.isArray(data.orders)) {
       data.orders = [];
     }
 
-    // Stare produkty bez kategorii trafiają do "Inne"
-    data.products = data.products.map(product => ({
-      ...product,
-      category: product.category || "inne"
-    }));
+    for (const product of data.products) {
+      if (!product.category) {
+        product.category = "inne";
+      }
+    }
 
     return data;
   } catch {
@@ -84,76 +64,67 @@ function saveData(data) {
   );
 }
 
-// =====================================================
-// KOMENDY SLASH
-// =====================================================
+function cleanName(name) {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9-_]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 40) || "klient";
+}
 
 const commands = [
-  // /sklep
   new SlashCommandBuilder()
     .setName("sklep")
-    .setDescription("Pokazuje wszystkie produkty."),
+    .setDescription("Pokazuje produkty w sklepie."),
 
-  // /produkty
   new SlashCommandBuilder()
     .setName("produkty")
-    .setDescription("Pokazuje produkty wraz z ID."),
+    .setDescription("Pokazuje produkty w sklepie."),
 
- // /produkt-dodaj
-new SlashCommandBuilder()
-  .setName("produkt-dodaj")
-  .setDescription("Dodaje produkt do sklepu.")
-  .addStringOption(option =>
-    option
-      .setName("nazwa")
-      .setDescription("Nazwa produktu")
-      .setRequired(true)
-  )
-  .addNumberOption(option =>
-    option
-      .setName("cena")
-      .setDescription("Cena produktu")
-      .setRequired(true)
-      .setMinValue(0)
-  )
-  .addStringOption(option =>
-    option
-      .setName("kategoria")
-      .setDescription("Kategoria produktu")
-      .setRequired(true)
-      .addChoices(
-        {
-          name: "🎮 Gry",
-          value: "gry"
-        },
-        {
-          name: "👤 Konta",
-          value: "konta"
-        },
-        {
-          name: "💎 Premium",
-          value: "premium"
-        },
-        {
-          name: "📦 Inne",
-          value: "inne"
-        }
-      )
-  )
-  .addStringOption(option =>
-    option
-      .setName("opis")
-      .setDescription("Opis produktu")
-      .setRequired(false)
-  )
-  .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
+  new SlashCommandBuilder()
+    .setName("produkt-dodaj")
+    .setDescription("Dodaje produkt do sklepu.")
+    .addStringOption(o =>
+      o
+        .setName("nazwa")
+        .setDescription("Nazwa produktu")
+        .setRequired(true)
+    )
+    .addNumberOption(o =>
+      o
+        .setName("cena")
+        .setDescription("Cena produktu")
+        .setRequired(true)
+        .setMinValue(0)
+    )
+    .addStringOption(o =>
+      o
+        .setName("kategoria")
+        .setDescription("Kategoria produktu")
+        .setRequired(true)
+        .addChoices(
+          { name: "🎮 Gry", value: "gry" },
+          { name: "👤 Konta", value: "konta" },
+          { name: "💎 Premium", value: "premium" },
+          { name: "📦 Inne", value: "inne" }
+        )
+    )
+    .addStringOption(o =>
+      o
+        .setName("opis")
+        .setDescription("Opis produktu")
+        .setRequired(false)
+    )
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
-  // /produkt-usun
   new SlashCommandBuilder()
     .setName("produkt-usun")
-    .setDescription("Usuwa produkt.")
-    .addIntegerOption(option =>
-      option
+    .setDescription("Usuwa produkt ze sklepu.")
+    .addIntegerOption(o =>
+      o
         .setName("id")
         .setDescription("ID produktu")
         .setRequired(true)
@@ -161,39 +132,31 @@ new SlashCommandBuilder()
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
-  // /zamow
   new SlashCommandBuilder()
     .setName("zamow")
-    .setDescription("Tworzy zamówienie.")
-    .addIntegerOption(option =>
-      option
+    .setDescription("Tworzy zamówienie na produkt.")
+    .addIntegerOption(o =>
+      o
         .setName("id")
         .setDescription("ID produktu")
         .setRequired(true)
         .setMinValue(1)
     ),
 
-  // /zamowienia
   new SlashCommandBuilder()
     .setName("zamowienia")
     .setDescription("Pokazuje ostatnie zamówienia.")
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
-  // /panel-zakup
   new SlashCommandBuilder()
     .setName("panel-zakup")
     .setDescription("Tworzy panel zakupowy.")
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
-].map(command => command.toJSON());
-
-// =====================================================
-// REJESTRACJA KOMEND
-// =====================================================
+].map(c => c.toJSON());
 
 async function registerCommands() {
-  const rest = new REST({
-    version: "10"
-  }).setToken(process.env.DISCORD_TOKEN);
+  const rest = new REST({ version: "10" })
+    .setToken(process.env.DISCORD_TOKEN);
 
   const route = process.env.GUILD_ID
     ? Routes.applicationGuildCommands(
@@ -211,50 +174,35 @@ async function registerCommands() {
   console.log("Komendy slash zostały zarejestrowane.");
 }
 
-// =====================================================
-// BOT
-// =====================================================
-
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds
   ]
 });
 
-// =====================================================
-// READY
-// =====================================================
-
 client.once("ready", () => {
   console.log(`Zalogowano jako ${client.user.tag}`);
   console.log("Cosmo Shøp - Bot jest online.");
 });
 
-// =====================================================
-// INTERAKCJE
-// =====================================================
-
 client.on("interactionCreate", async interaction => {
-
   try {
+    const data = loadData();
+    const guildId = interaction.guildId;
 
-    // =================================================
-    // KOMENDY SLASH
-    // =================================================
+    // =========================
+    // SLASH COMMANDS
+    // =========================
 
     if (interaction.isChatInputCommand()) {
 
-      const data = loadData();
-      const guildId = interaction.guildId;
-
-      // -----------------------------------------------
       // /sklep
-      // -----------------------------------------------
-
-      if (interaction.commandName === "sklep") {
-
+      if (
+        interaction.commandName === "sklep" ||
+        interaction.commandName === "produkty"
+      ) {
         const products = data.products.filter(
-          product => product.guildId === guildId
+          p => p.guildId === guildId
         );
 
         if (!products.length) {
@@ -264,151 +212,80 @@ client.on("interactionCreate", async interaction => {
         }
 
         const description = products
-          .map(product => {
-
+          .map(p => {
             const category =
-              CATEGORIES[product.category] ||
-              CATEGORIES.inne;
+              CATEGORIES[p.category]?.name || "Inne";
 
             return (
-              `**#${product.id} — ${product.name}**\n` +
-              `${category.emoji} ${category.name}\n` +
-              `${product.description || "Brak opisu"}\n` +
-              `💰 **${product.price.toFixed(2)} zł**`
+              `**#${p.id} — ${p.name}**\n` +
+              `${p.description || "Brak opisu"}\n` +
+              `📁 ${category}\n` +
+              `💰 **${p.price.toFixed(2)} zł**`
             );
-
           })
           .join("\n\n");
 
         const embed = new EmbedBuilder()
           .setTitle("🛍️ Cosmo Shøp")
-          .setDescription(
-            description.slice(0, 4096)
-          );
+          .setDescription(description.slice(0, 4096));
 
         return interaction.reply({
           embeds: [embed]
         });
       }
 
-      // -----------------------------------------------
-      // /produkty
-      // -----------------------------------------------
-
-      if (interaction.commandName === "produkty") {
-
-        const products = data.products.filter(
-          product => product.guildId === guildId
-        );
-
-        if (!products.length) {
-          return interaction.reply(
-            "🛒 Brak produktów."
-          );
-        }
-
-        const text = products
-          .map(product => {
-
-            const category =
-              CATEGORIES[product.category] ||
-              CATEGORIES.inne;
-
-            return (
-              `**#${product.id} — ${product.name}**\n` +
-              `${category.emoji} ${category.name} • ` +
-              `💰 ${product.price.toFixed(2)} zł`
-            );
-
-          })
-          .join("\n\n");
-
-        return interaction.reply({
-          content: `🛍️ **Produkty w sklepie**\n\n${text}`
-        });
-      }
-
-      // -----------------------------------------------
       // /produkt-dodaj
-      // -----------------------------------------------
-
       if (interaction.commandName === "produkt-dodaj") {
-
-        const name =
-          interaction.options.getString("nazwa");
-
-        const price =
-          interaction.options.getNumber("cena");
-
+        const name = interaction.options.getString("nazwa");
+        const price = interaction.options.getNumber("cena");
+        const category =
+          interaction.options.getString("kategoria");
         const description =
           interaction.options.getString("opis") || "";
 
-        const category =
-          interaction.options.getString("kategoria");
+        const guildProducts = data.products.filter(
+          p => p.guildId === guildId
+        );
 
-        const guildProducts =
-          data.products.filter(
-            product => product.guildId === guildId
-          );
-
-        const nextId =
-          guildProducts.length
-            ? Math.max(
-                ...guildProducts.map(
-                  product => product.id
-                )
-              ) + 1
-            : 1;
+        const nextId = guildProducts.length
+          ? Math.max(...guildProducts.map(p => p.id)) + 1
+          : 1;
 
         data.products.push({
           id: nextId,
           guildId,
           name,
           price,
-          description,
           category,
+          description,
           createdAt: new Date().toISOString()
         });
 
         saveData(data);
 
-        const categoryInfo =
-          CATEGORIES[category] ||
-          CATEGORIES.inne;
-
         return interaction.reply(
-          `✅ Dodano produkt **#${nextId} — ${name}**\n` +
-          `${categoryInfo.emoji} Kategoria: **${categoryInfo.name}**\n` +
-          `💰 Cena: **${price.toFixed(2)} zł**`
+          `✅ Dodano produkt **#${nextId} — ${name}** za **${price.toFixed(2)} zł**.`
         );
       }
 
-      // -----------------------------------------------
       // /produkt-usun
-      // -----------------------------------------------
-
       if (interaction.commandName === "produkt-usun") {
+        const id = interaction.options.getInteger("id");
 
-        const id =
-          interaction.options.getInteger("id");
-
-        const index =
-          data.products.findIndex(
-            product =>
-              product.guildId === guildId &&
-              product.id === id
-          );
+        const index = data.products.findIndex(
+          p =>
+            p.guildId === guildId &&
+            p.id === id
+        );
 
         if (index === -1) {
           return interaction.reply({
-            content:
-              "❌ Nie znaleziono takiego produktu.",
+            content: "❌ Nie znaleziono takiego produktu.",
             ephemeral: true
           });
         }
 
-        const removed =
-          data.products.splice(index, 1)[0];
+        const removed = data.products.splice(index, 1)[0];
 
         saveData(data);
 
@@ -417,38 +294,26 @@ client.on("interactionCreate", async interaction => {
         );
       }
 
-      // -----------------------------------------------
       // /zamow
-      // -----------------------------------------------
-
       if (interaction.commandName === "zamow") {
+        const id = interaction.options.getInteger("id");
 
-        const id =
-          interaction.options.getInteger("id");
-
-        const product =
-          data.products.find(
-            item =>
-              item.guildId === guildId &&
-              item.id === id
-          );
+        const product = data.products.find(
+          p =>
+            p.guildId === guildId &&
+            p.id === id
+        );
 
         if (!product) {
           return interaction.reply({
-            content:
-              "❌ Nie znaleziono takiego produktu.",
+            content: "❌ Nie znaleziono takiego produktu.",
             ephemeral: true
           });
         }
 
-        const orderId =
-          data.orders.length
-            ? Math.max(
-                ...data.orders.map(
-                  order => order.id
-                )
-              ) + 1
-            : 1;
+        const orderId = data.orders.length
+          ? Math.max(...data.orders.map(o => o.id)) + 1
+          : 1;
 
         data.orders.push({
           id: orderId,
@@ -464,76 +329,54 @@ client.on("interactionCreate", async interaction => {
         saveData(data);
 
         return interaction.reply(
-          `✅ Utworzono zamówienie **#${orderId}**\n` +
-          `📦 Produkt: **${product.name}**\n` +
-          `💰 Cena: **${product.price.toFixed(2)} zł**\n` +
-          `📌 Status: **nowe**`
+          `✅ Utworzono zamówienie **#${orderId}** na **${product.name}** za **${product.price.toFixed(2)} zł**.`
         );
       }
 
-      // -----------------------------------------------
       // /zamowienia
-      // -----------------------------------------------
-
       if (interaction.commandName === "zamowienia") {
-
-        const orders =
-          data.orders
-            .filter(order =>
-              order.guildId === guildId
-            )
-            .slice(-15)
-            .reverse();
+        const orders = data.orders
+          .filter(o => o.guildId === guildId)
+          .slice(-15)
+          .reverse();
 
         if (!orders.length) {
-          return interaction.reply(
-            "📦 Brak zamówień."
-          );
+          return interaction.reply("📦 Brak zamówień.");
         }
 
-        const text =
-          orders
-            .map(order =>
-              `**#${order.id}** — ` +
-              `<@${order.userId}> — ` +
-              `${order.productName} — ` +
-              `**${order.price.toFixed(2)} zł** — ` +
-              `\`${order.status}\``
-            )
-            .join("\n");
+        const text = orders
+          .map(o =>
+            `**#${o.id}** — <@${o.userId}> — ${o.productName} — **${o.price.toFixed(2)} zł** — \`${o.status}\``
+          )
+          .join("\n");
 
         return interaction.reply({
           content:
-            `📦 **Ostatnie zamówienia**\n\n${text}`
+            `📦 **Ostatnie zamówienia**\n${text}`
         });
       }
 
-      // -----------------------------------------------
       // /panel-zakup
-      // -----------------------------------------------
-
       if (interaction.commandName === "panel-zakup") {
-
         const embed = new EmbedBuilder()
-          .setTitle("🛒 Cosmo Shøp")
+          .setTitle("🛍️ Cosmo Shøp")
           .setDescription(
-            "Chcesz coś kupić?\n\n" +
-            "Kliknij przycisk **🛒 Zakup**, " +
-            "a następnie wybierz kategorię i produkt.\n\n" +
-            "Po wybraniu produktu zostanie " +
-            "automatycznie utworzony prywatny ticket."
-          );
+            "Kliknij przycisk poniżej, aby rozpocząć zakup.\n\n" +
+            "🛒 **Kup produkt**\n" +
+            "Wybierz kategorię, a następnie produkt."
+          )
+          .setFooter({
+            text: "Cosmo Shøp • System zakupów"
+          });
 
-        const button =
-          new ButtonBuilder()
-            .setCustomId("otworz_zakup")
-            .setLabel("Zakup")
-            .setEmoji("🛒")
-            .setStyle(ButtonStyle.Primary);
+        const button = new ButtonBuilder()
+          .setCustomId("otworz_sklep")
+          .setLabel("Kup produkt")
+          .setEmoji("🛒")
+          .setStyle(ButtonStyle.Primary);
 
-        const row =
-          new ActionRowBuilder()
-            .addComponents(button);
+        const row = new ActionRowBuilder()
+          .addComponents(button);
 
         return interaction.reply({
           embeds: [embed],
@@ -542,313 +385,315 @@ client.on("interactionCreate", async interaction => {
       }
     }
 
-    // =================================================
-    // PRZYCISK "ZAKUP"
-    // =================================================
+    // =========================
+    // BUTTONY
+    // =========================
 
-    if (
-      interaction.isButton() &&
-      interaction.customId === "otworz_zakup"
-    ) {
+    if (interaction.isButton()) {
 
-      const data = loadData();
-
-      const products =
-        data.products.filter(
-          product =>
-            product.guildId === interaction.guildId
+      // Otwieranie sklepu
+      if (interaction.customId === "otworz_sklep") {
+        const products = data.products.filter(
+          p => p.guildId === guildId
         );
 
-      if (!products.length) {
+        if (!products.length) {
+          return interaction.reply({
+            content: "🛒 Sklep jest obecnie pusty.",
+            ephemeral: true
+          });
+        }
+
+        const availableCategories =
+          [...new Set(
+            products.map(p => p.category || "inne")
+          )];
+
+        const menu = new StringSelectMenuBuilder()
+          .setCustomId("wybierz_kategorie")
+          .setPlaceholder("📁 Wybierz kategorię");
+
+        for (const categoryId of availableCategories) {
+          const category =
+            CATEGORIES[categoryId] || CATEGORIES.inne;
+
+          menu.addOptions(
+            new StringSelectMenuOptionBuilder()
+              .setLabel(category.name)
+              .setValue(categoryId)
+              .setEmoji(category.emoji)
+          );
+        }
+
+        const row = new ActionRowBuilder()
+          .addComponents(menu);
+
         return interaction.reply({
-          content:
-            "❌ Sklep nie ma jeszcze żadnych produktów.",
+          content: "🛒 **Wybierz kategorię produktu:**",
+          components: [row],
           ephemeral: true
         });
       }
 
-      const menu =
-        new StringSelectMenuBuilder()
-          .setCustomId("wybierz_kategorie")
-          .setPlaceholder("Wybierz kategorię produktu");
-
-      for (const [id, category] of Object.entries(CATEGORIES)) {
-
-        const hasProducts =
-          products.some(
-            product => product.category === id
-          );
-
-        if (!hasProducts) {
-          continue;
-        }
-
-        menu.addOptions(
-          new StringSelectMenuOptionBuilder()
-            .setLabel(category.name)
-            .setValue(id)
-            .setEmoji(category.emoji)
-        );
-      }
-
-      const row =
-        new ActionRowBuilder()
-          .addComponents(menu);
-
-      return interaction.reply({
-        content: "🛒 **Wybierz kategorię:**",
-        components: [row],
-        ephemeral: true
-      });
-    }
-
-    // =================================================
-    // WYBÓR KATEGORII
-    // =================================================
-
-    if (
-      interaction.isStringSelectMenu() &&
-      interaction.customId === "wybierz_kategorie"
-    ) {
-
-      const categoryId =
-        interaction.values[0];
-
-      const data = loadData();
-
-      const products =
-        data.products.filter(
-          product =>
-            product.guildId === interaction.guildId &&
-            product.category === categoryId
-        );
-
-      if (!products.length) {
-        return interaction.update({
+      // Płatność
+      if (interaction.customId === "platnosc") {
+        return interaction.reply({
           content:
-            "❌ W tej kategorii nie ma produktów.",
-          components: []
+            "💳 **Płatność**\n\n" +
+            "Skontaktuj się z obsługą w tym tickecie " +
+            "i ustal metodę płatności.",
+          ephemeral: true
         });
       }
 
-      const category =
-        CATEGORIES[categoryId] ||
-        CATEGORIES.inne;
+      // Zamówienie gotowe
+      if (interaction.customId === "zamowienie_gotowe") {
+        if (
+          !interaction.memberPermissions?.has(
+            PermissionFlagsBits.ManageGuild
+          )
+        ) {
+          return interaction.reply({
+            content:
+              "❌ Tylko obsługa sklepu może oznaczyć zamówienie jako gotowe.",
+            ephemeral: true
+          });
+        }
 
-      const menu =
-        new StringSelectMenuBuilder()
+        return interaction.reply(
+          "📦 **Zamówienie gotowe!**\n\n" +
+          "Produkt został przekazany klientowi.\n" +
+          "♾️ Produkt nadal pozostaje dostępny w sklepie."
+        );
+      }
+
+      // Zamknięcie ticketu
+      if (interaction.customId === "zamknij_ticket") {
+        if (
+          !interaction.memberPermissions?.has(
+            PermissionFlagsBits.ManageGuild
+          )
+        ) {
+          return interaction.reply({
+            content:
+              "❌ Tylko obsługa sklepu może zamknąć ticket.",
+            ephemeral: true
+          });
+        }
+
+        await interaction.reply(
+          "🔒 Ticket zostanie zamknięty za 3 sekundy..."
+        );
+
+        const channel = interaction.channel;
+        const parent = channel.parent;
+
+        setTimeout(async () => {
+          try {
+            await channel.delete();
+
+            if (
+              parent &&
+              parent.type === ChannelType.GuildCategory
+            ) {
+              const freshParent =
+                await interaction.guild.channels.fetch(parent.id)
+                  .catch(() => null);
+
+              if (
+                freshParent &&
+                freshParent.children.cache.size === 0
+              ) {
+                await freshParent.delete().catch(() => {});
+              }
+            }
+          } catch (error) {
+            console.error(
+              "Nie udało się zamknąć ticketu:",
+              error
+            );
+          }
+        }, 3000);
+
+        return;
+      }
+    }
+
+    // =========================
+    // SELECT MENU
+    // =========================
+
+    if (interaction.isStringSelectMenu()) {
+
+      // Wybór kategorii
+      if (
+        interaction.customId === "wybierz_kategorie"
+      ) {
+        const categoryId =
+          interaction.values[0];
+
+        const products = data.products.filter(
+          p =>
+            p.guildId === guildId &&
+            (p.category || "inne") === categoryId
+        );
+
+        if (!products.length) {
+          return interaction.update({
+            content:
+              "❌ W tej kategorii nie ma produktów.",
+            components: []
+          });
+        }
+
+        const category =
+          CATEGORIES[categoryId] || CATEGORIES.inne;
+
+        const menu = new StringSelectMenuBuilder()
           .setCustomId(
             `wybierz_produkt_${categoryId}`
           )
           .setPlaceholder(
-            `Wybierz produkt z kategorii ${category.name}`
+            `${category.emoji} Wybierz produkt`
           );
 
-      // Discord pozwala maksymalnie na 25 opcji
-      for (const product of products.slice(0, 25)) {
+        for (const product of products.slice(0, 25)) {
+          menu.addOptions(
+            new StringSelectMenuOptionBuilder()
+              .setLabel(
+                `${product.name} — ${product.price.toFixed(2)} zł`
+                  .slice(0, 100)
+              )
+              .setDescription(
+                (product.description ||
+                  "Brak opisu").slice(0, 100)
+              )
+              .setValue(String(product.id))
+          );
+        }
 
-        menu.addOptions(
-          new StringSelectMenuOptionBuilder()
-            .setLabel(
-              product.name.slice(0, 100)
-            )
-            .setDescription(
-              `${product.price.toFixed(2)} zł`
-            )
-            .setValue(
-              String(product.id)
-            )
-        );
-      }
-
-      const row =
-        new ActionRowBuilder()
+        const row = new ActionRowBuilder()
           .addComponents(menu);
 
-      return interaction.update({
-        content:
-          `${category.emoji} **${category.name}**\n\n` +
-          `Wybierz produkt:`,
-        components: [row]
-      });
-    }
-
-    // =================================================
-    // WYBÓR PRODUKTU
-    // =================================================
-
-    if (
-      interaction.isStringSelectMenu() &&
-      interaction.customId.startsWith(
-        "wybierz_produkt_"
-      )
-    ) {
-
-      const productId =
-        Number(interaction.values[0]);
-
-      const data = loadData();
-
-      const product =
-        data.products.find(
-          item =>
-            item.guildId === interaction.guildId &&
-            item.id === productId
-        );
-
-      if (!product) {
         return interaction.update({
           content:
-            "❌ Produkt już nie istnieje.",
-          components: []
+            `${category.emoji} **${category.name}**\n\nWybierz produkt:`,
+          components: [row]
         });
       }
 
-      const guild = interaction.guild;
-
-      // -----------------------------------------------
-      // ROLA OBSŁUGA
-      // -----------------------------------------------
-
-      const staffRole =
-        guild.roles.cache.find(
-          role =>
-            role.name.toLowerCase() ===
-            "obsługa"
+      // Wybór produktu
+      if (
+        interaction.customId.startsWith(
+          "wybierz_produkt_"
+        )
+      ) {
+        const productId = Number(
+          interaction.values[0]
         );
 
-      // -----------------------------------------------
-      // BEZPIECZNA NAZWA UŻYTKOWNIKA
-      // -----------------------------------------------
+        const product = data.products.find(
+          p =>
+            p.guildId === guildId &&
+            p.id === productId
+        );
 
-      const safeUsername =
-        interaction.user.username
-          .toLowerCase()
-          .replace(/[^a-z0-9-_]/g, "-")
-          .replace(/-+/g, "-")
-          .replace(/^-|-$/g, "")
-          .slice(0, 20) ||
-        "klient";
-
-      // -----------------------------------------------
-      // NAZWA KATEGORII
-      // -----------------------------------------------
-
-      const categoryName =
-        `🛒 ZAKUP - ${safeUsername}`;
-
-      // -----------------------------------------------
-      // UPRAWNIENIA KATEGORII
-      // -----------------------------------------------
-
-      const categoryPermissions = [
-        {
-          id: guild.roles.everyone.id,
-          deny: [
-            PermissionFlagsBits.ViewChannel
-          ]
-        },
-        {
-          id: interaction.user.id,
-          allow: [
-            PermissionFlagsBits.ViewChannel,
-            PermissionFlagsBits.SendMessages,
-            PermissionFlagsBits.ReadMessageHistory,
-            PermissionFlagsBits.AttachFiles,
-            PermissionFlagsBits.EmbedLinks
-          ]
+        if (!product) {
+          return interaction.update({
+            content:
+              "❌ Nie znaleziono tego produktu.",
+            components: []
+          });
         }
-      ];
 
-      if (staffRole) {
-        categoryPermissions.push({
-          id: staffRole.id,
-          allow: [
-            PermissionFlagsBits.ViewChannel,
-            PermissionFlagsBits.SendMessages,
-            PermissionFlagsBits.ReadMessageHistory,
-            PermissionFlagsBits.AttachFiles,
-            PermissionFlagsBits.EmbedLinks
-          ]
-        });
-      }
+        const staffRole =
+          interaction.guild.roles.cache.find(
+            role =>
+              role.name.toLowerCase() ===
+              "obsługa"
+          );
 
-      // -----------------------------------------------
-      // TWORZENIE NOWEJ KATEGORII
-      // -----------------------------------------------
-
-      const ticketCategory =
-        await guild.channels.create({
-          name: categoryName,
-          type: ChannelType.GuildCategory,
-          permissionOverwrites:
-            categoryPermissions
-        });
-
-      // -----------------------------------------------
-      // UPRAWNIENIA TICKETU
-      // -----------------------------------------------
-
-      const ticketPermissions = [
-        {
-          id: guild.roles.everyone.id,
-          deny: [
-            PermissionFlagsBits.ViewChannel
-          ]
-        },
-        {
-          id: interaction.user.id,
-          allow: [
-            PermissionFlagsBits.ViewChannel,
-            PermissionFlagsBits.SendMessages,
-            PermissionFlagsBits.ReadMessageHistory,
-            PermissionFlagsBits.AttachFiles,
-            PermissionFlagsBits.EmbedLinks
-          ]
+        if (!staffRole) {
+          return interaction.update({
+            content:
+              "❌ Nie znaleziono roli **Obsługa**. Utwórz rolę o dokładnej nazwie `Obsługa`.",
+            components: []
+          });
         }
-      ];
 
-      if (staffRole) {
-        ticketPermissions.push({
-          id: staffRole.id,
-          allow: [
-            PermissionFlagsBits.ViewChannel,
-            PermissionFlagsBits.SendMessages,
-            PermissionFlagsBits.ReadMessageHistory,
-            PermissionFlagsBits.AttachFiles,
-            PermissionFlagsBits.EmbedLinks
-          ]
-        });
-      }
+        const username = cleanName(
+          interaction.user.username
+        );
 
-      // -----------------------------------------------
-      // TWORZENIE TICKETU
-      // -----------------------------------------------
+        // Tworzymy osobną kategorię dla każdego ticketu
+        const ticketCategory =
+          await interaction.guild.channels.create({
+            name: `🛒 ZAKUP - ${username}`.slice(0, 100),
+            type: ChannelType.GuildCategory,
+            permissionOverwrites: [
+              {
+                id: interaction.guild.roles.everyone.id,
+                deny: ["ViewChannel"]
+              },
+              {
+                id: interaction.user.id,
+                allow: [
+                  "ViewChannel",
+                  "SendMessages",
+                  "ReadMessageHistory",
+                  "AttachFiles"
+                ]
+              },
+              {
+                id: staffRole.id,
+                allow: [
+                  "ViewChannel",
+                  "SendMessages",
+                  "ReadMessageHistory",
+                  "ManageChannels",
+                  "AttachFiles"
+                ]
+              }
+            ]
+          });
 
-      const ticketChannel =
-        await guild.channels.create({
-          name: `🛒・zakup-${safeUsername}`,
-          type: ChannelType.GuildText,
-          parent: ticketCategory.id,
-          permissionOverwrites:
-            ticketPermissions
-        });
+        const ticketChannel =
+          await interaction.guild.channels.create({
+            name: `🛒・zakup-${username}`.slice(0, 100),
+            type: ChannelType.GuildText,
+            parent: ticketCategory.id,
+            permissionOverwrites: [
+              {
+                id: interaction.guild.roles.everyone.id,
+                deny: ["ViewChannel"]
+              },
+              {
+                id: interaction.user.id,
+                allow: [
+                  "ViewChannel",
+                  "SendMessages",
+                  "ReadMessageHistory",
+                  "AttachFiles"
+                ]
+              },
+              {
+                id: staffRole.id,
+                allow: [
+                  "ViewChannel",
+                  "SendMessages",
+                  "ReadMessageHistory",
+                  "ManageChannels",
+                  "AttachFiles"
+                ]
+              }
+            ]
+          });
 
-      // -----------------------------------------------
-      // EMBED TICKETU
-      // -----------------------------------------------
-
-      const category =
-        CATEGORIES[product.category] ||
-        CATEGORIES.inne;
-
-      const ticketEmbed =
-        new EmbedBuilder()
+        const embed = new EmbedBuilder()
           .setTitle("🛒 Nowe zamówienie")
           .setDescription(
             "Witaj w swoim tickecie zakupowym!\n\n" +
-            "Obsługa ustali tutaj z Tobą metodę płatności. " +
-            "Po otrzymaniu płatności produkt zostanie przekazany."
+            "Obsługa sklepu zajmie się Twoim zamówieniem."
           )
           .addFields(
             {
@@ -863,276 +708,119 @@ client.on("interactionCreate", async interaction => {
             },
             {
               name: "💰 Cena",
-              value:
-                `${product.price.toFixed(2)} zł`,
+              value: `${product.price.toFixed(2)} zł`,
               inline: true
             },
             {
-              name: "📂 Kategoria",
+              name: "📁 Kategoria",
               value:
-                `${category.emoji} ${category.name}`,
+                CATEGORIES[product.category]?.name ||
+                "Inne",
               inline: true
             }
           )
           .setFooter({
-            text:
-              "Cosmo Shøp • Obsługa zamówienia"
+            text: "Cosmo Shøp • Ticket zakupowy"
           });
 
-      // -----------------------------------------------
-      // PRZYCISKI
-      // -----------------------------------------------
-
-      const paymentButton =
-        new ButtonBuilder()
+        const paymentButton = new ButtonBuilder()
           .setCustomId("platnosc")
           .setLabel("Płatność")
           .setEmoji("💳")
           .setStyle(ButtonStyle.Primary);
 
-      const readyButton =
-        new ButtonBuilder()
+        const readyButton = new ButtonBuilder()
           .setCustomId("zamowienie_gotowe")
           .setLabel("Zamówienie gotowe")
           .setEmoji("📦")
           .setStyle(ButtonStyle.Success);
 
-      const closeButton =
-        new ButtonBuilder()
+        const closeButton = new ButtonBuilder()
           .setCustomId("zamknij_ticket")
           .setLabel("Zamknij ticket")
           .setEmoji("🔒")
           .setStyle(ButtonStyle.Danger);
 
-      const buttons =
-        new ActionRowBuilder()
+        const row = new ActionRowBuilder()
           .addComponents(
             paymentButton,
             readyButton,
             closeButton
           );
 
-      // -----------------------------------------------
-      // WIADOMOŚĆ W TICKIECIE
-      // -----------------------------------------------
-
-      const staffMention =
-        staffRole
-          ? `<@&${staffRole.id}>`
-          : "🔔 **Obsługa sklepu**";
-
-      await ticketChannel.send({
-        content:
-          `${staffMention}\n` +
-          `<@${interaction.user.id}>`,
-        embeds: [ticketEmbed],
-        components: [buttons]
-      });
-
-      // -----------------------------------------------
-      // ODPOWIEDŹ DLA KLIENTA
-      // -----------------------------------------------
-
-      return interaction.update({
-        content:
-          `✅ Utworzono ticket!\n\n` +
-          `📦 Produkt: **${product.name}**\n` +
-          `💰 Cena: **${product.price.toFixed(2)} zł**\n\n` +
-          `🎫 ${ticketChannel}`,
-        components: []
-      });
-    }
-
-    // =================================================
-    // PRZYCISK PŁATNOŚĆ
-    // =================================================
-
-    if (
-      interaction.isButton() &&
-      interaction.customId === "platnosc"
-    ) {
-
-      return interaction.reply({
-        content:
-          "💳 **Płatność**\n\n" +
-          "Skontaktuj się z obsługą sklepu " +
-          "w tym tickecie, aby ustalić metodę płatności.",
-        ephemeral: true
-      });
-    }
-
-    // =================================================
-    // PRZYCISK ZAMÓWIENIE GOTOWE
-    // =================================================
-
-    if (
-      interaction.isButton() &&
-      interaction.customId === "zamowienie_gotowe"
-    ) {
-
-      return interaction.reply({
-        content:
-          "📦 **Zamówienie oznaczone jako gotowe!**\n\n" +
-          "Możesz teraz przekazać produkt klientowi.",
-        ephemeral: false
-      });
-    }
-
-    // =================================================
-    // ZAMKNIĘCIE TICKETU
-    // =================================================
-
-    if (
-      interaction.isButton() &&
-      interaction.customId === "zamknij_ticket"
-    ) {
-
-      // Tylko obsługa / administrator może zamknąć
-      const member =
-        interaction.member;
-
-      const isStaff =
-        member.permissions.has(
-          PermissionFlagsBits.ManageChannels
-        ) ||
-        member.permissions.has(
-          PermissionFlagsBits.ManageGuild
-        ) ||
-        member.roles.cache.some(
-          role =>
-            role.name.toLowerCase() ===
-            "obsługa"
-        );
-
-      if (!isStaff) {
-        return interaction.reply({
+        await ticketChannel.send({
           content:
-            "❌ Tylko obsługa może zamknąć ticket.",
-          ephemeral: true
+            `<@${interaction.user.id}> <@&${staffRole.id}>`,
+          embeds: [embed],
+          components: [row]
+        });
+
+        return interaction.update({
+          content:
+            `✅ Utworzono ticket: ${ticketChannel}`,
+          components: []
         });
       }
-
-      await interaction.reply(
-        "🔒 Ticket zostanie zamknięty za 3 sekundy..."
-      );
-
-      const ticketChannel =
-        interaction.channel;
-
-      const parentCategory =
-        ticketChannel.parent;
-
-      setTimeout(async () => {
-
-        try {
-          await ticketChannel.delete(
-            "Ticket zamknięty"
-          );
-        } catch (error) {
-          console.error(
-            "Nie udało się usunąć ticketu:",
-            error
-          );
-        }
-
-        // Jeśli kategoria jest pusta,
-        // również ją usuwamy.
-        if (
-          parentCategory &&
-          parentCategory.type ===
-            ChannelType.GuildCategory
-        ) {
-
-          try {
-
-            const children =
-              parentCategory.children.cache;
-
-            if (children.size === 0) {
-              await parentCategory.delete(
-                "Pusta kategoria ticketu"
-              );
-            }
-
-          } catch (error) {
-            console.error(
-              "Nie udało się usunąć kategorii:",
-              error
-            );
-          }
-        }
-
-      }, 3000);
-
-      return;
     }
 
   } catch (error) {
-
     console.error(
-      "Błąd podczas obsługi interakcji:",
+      "Błąd interactionCreate:",
       error
     );
 
-    try {
-
-      if (interaction.replied) {
-
-        await interaction.followUp({
-          content:
-            "❌ Wystąpił błąd. Sprawdź logi Render.",
-          ephemeral: true
-        });
-
-      } else if (interaction.deferred) {
-
-        await interaction.editReply({
-          content:
-            "❌ Wystąpił błąd. Sprawdź logi Render."
-        });
-
-      } else {
-
-        await interaction.reply({
-          content:
-            "❌ Wystąpił błąd. Sprawdź logi Render.",
-          ephemeral: true
-        });
-
-      }
-
-    } catch {}
+    if (!interaction.replied && !interaction.deferred) {
+      await interaction.reply({
+        content:
+          "❌ Wystąpił błąd podczas wykonywania operacji.",
+        ephemeral: true
+      }).catch(() => {});
+    }
   }
 });
 
-// =====================================================
-// START BOTA
-// =====================================================
+// =========================
+// HTTP SERVER DLA RENDERA
+// =========================
+
+const PORT = process.env.PORT || 3000;
+
+http.createServer((req, res) => {
+  res.writeHead(200, {
+    "Content-Type": "text/plain; charset=utf-8"
+  });
+
+  res.end(
+    "Cosmo Shop Bot is online!"
+  );
+}).listen(PORT, () => {
+  console.log(
+    `Serwer HTTP działa na porcie ${PORT}`
+  );
+});
+
+// =========================
+// START
+// =========================
 
 (async () => {
-
   if (
     !process.env.DISCORD_TOKEN ||
     !process.env.CLIENT_ID
   ) {
-
     console.error(
-      "Brakuje DISCORD_TOKEN lub CLIENT_ID w zmiennych środowiskowych."
+      "Brakuje DISCORD_TOKEN lub CLIENT_ID."
     );
 
     process.exit(1);
   }
 
   try {
-
     await registerCommands();
-
     await client.login(
       process.env.DISCORD_TOKEN
     );
-
   } catch (error) {
-
     console.error(
       "Nie udało się uruchomić bota:",
       error
@@ -1140,33 +828,4 @@ client.on("interactionCreate", async interaction => {
 
     process.exit(1);
   }
-
 })();
-
-// =====================================================
-// SERWER HTTP DLA RENDER
-// =====================================================
-
-const PORT =
-  process.env.PORT || 3000;
-
-http
-  .createServer((req, res) => {
-
-    res.writeHead(200, {
-      "Content-Type":
-        "text/plain; charset=utf-8"
-    });
-
-    res.end(
-      "Cosmo Shop Bot is online!"
-    );
-
-  })
-  .listen(PORT, () => {
-
-    console.log(
-      `Serwer HTTP działa na porcie ${PORT}`
-    );
-
-  });
