@@ -854,6 +854,8 @@ if (interaction.customId === "wybierz_ticket") {
           "wybierz_produkt_"
         )
       ) {
+        await interaction.deferUpdate();
+        
         const productId = Number(
           interaction.values[0]
         );
