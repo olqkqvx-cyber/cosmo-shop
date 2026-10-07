@@ -503,6 +503,7 @@ if (interaction.commandName === "panel-zakup") {
         );
 
     if (interaction.isStringSelectMenu()) {
+  console.log("SELECT MENU:", interaction.customId);
           return interaction.reply({
             content: "🛒 Sklep jest obecnie pusty.",
             ephemeral: true
@@ -854,6 +855,8 @@ if (interaction.customId === "wybierz_ticket") {
           "wybierz_produkt_"
         )
       ) {
+        console.log("WYBRANO PRODUKT");
+        
         await interaction.deferUpdate();
         
         const productId = Number(
