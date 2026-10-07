@@ -139,7 +139,9 @@ function loadData() {
 }
 
 function saveData(data) {
-  try {
+
+    try {
+    
     fs.writeFileSync(
       DATA_FILE,
       JSON.stringify(data, null, 2),
@@ -2935,7 +2937,7 @@ client.on(
           });
         }
       }
-    }
+    
 
 
   } catch (error) {
@@ -2982,7 +2984,7 @@ function catchInteraction(
       error
     );
   }
-}
+
 
 /* =========================================================
    GWIAZDKI OPINII
