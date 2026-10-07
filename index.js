@@ -2937,7 +2937,7 @@ client.on(
           });
         }
       }
-    
+    }
 
 
   } catch (error) {
