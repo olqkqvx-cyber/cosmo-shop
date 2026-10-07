@@ -2937,14 +2937,6 @@ client.on(
       }
     }
 
-    /* =====================================================
-       CATCH
-       ===================================================== */
-
-    catchInteraction(
-      interaction,
-      error
-    );
 
   } catch (error) {
     console.error(
