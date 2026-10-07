@@ -2984,7 +2984,7 @@ function catchInteraction(
       error
     );
   }
-
+}
 
 /* =========================================================
    GWIAZDKI OPINII
